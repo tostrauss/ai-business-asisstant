@@ -1,0 +1,55 @@
+<!-- frontend/src/app/app.component.html -->
+<div class="app-container">
+  <header class="app-header">
+    <h1>🤖 {{ title }}</h1>
+    <div class="connection-status">
+      <span class="status-dot" [class.connected]="isConnected"></span>
+      {{ isConnected ? 'Connected' : 'Disconnected' }}
+    </div>
+  </header>
+
+  <div class="chat-container">
+    <div class="messages-container">
+      <div *ngFor="let message of messages" class="message" [ngClass]="getMessageClass(message)">
+        <div class="message-content">
+          {{ message.content }}
+        </div>
+        <div class="message-time">
+          {{ message.timestamp | date:'short' }}
+        </div>
+      </div>
+      
+      <div *ngIf="messages.length === 0" class="welcome-message">
+        <h2>Welcome to AI Business Assistant!</h2>
+        <p>I can help you with:</p>
+        <ul>
+          <li>📅 Scheduling appointments</li>
+          <li>✅ Confirming bookings</li>
+          <li>💬 Answering questions about services</li>
+          <li>📊 Business information</li>
+        </ul>
+        <p>Type a message below to get started!</p>
+      </div>
+    </div>
+
+    <div class="input-container">
+      <input 
+        type="text" 
+        [(ngModel)]="newMessage" 
+        (keyup.enter)="sendMessage()"
+        placeholder="Type your message..."
+        class="message-input"
+        [disabled]="!isConnected">
+      <button 
+        (click)="sendMessage()" 
+        [disabled]="!isConnected || !newMessage.trim()"
+        class="send-button">
+        Send
+      </button>
+    </div>
+  </div>
+
+  <footer class="app-footer">
+    <p>Client ID: {{ clientId }} | Powered by OpenAI</p>
+  </footer>
+</div>
