@@ -1,0 +1,189 @@
+<!-- frontend/src/app/components/appointments/appointments.component.html -->
+<div class="appointments-container">
+  <!-- Header -->
+  <div class="appointments-header">
+    <h1>📅 Appointments</h1>
+    <div class="header-actions">
+      <button class="btn btn-secondary" (click)="refresh()" [disabled]="loading">
+        🔄 Refresh
+      </button>
+      <button class="btn btn-secondary" (click)="exportToCSV()">
+        📥 Export CSV
+      </button>
+      <button class="btn btn-secondary" (click)="toggleViewMode()">
+        {{ viewMode === 'list' ? '📅 Calendar View' : '📋 List View' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Statistics Cards -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-value">{{ stats.total }}</div>
+      <div class="stat-label">Total</div>
+    </div>
+    <div class="stat-card stat-pending">
+      <div class="stat-value">{{ stats.pending }}</div>
+      <div class="stat-label">Pending</div>
+    </div>
+    <div class="stat-card stat-confirmed">
+      <div class="stat-value">{{ stats.confirmed }}</div>
+      <div class="stat-label">Confirmed</div>
+    </div>
+    <div class="stat-card stat-cancelled">
+      <div class="stat-value">{{ stats.cancelled }}</div>
+      <div class="stat-label">Cancelled</div>
+    </div>
+    <div class="stat-card stat-completed">
+      <div class="stat-value">{{ stats.completed }}</div>
+      <div class="stat-label">Completed</div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters-section">
+    <div class="filter-group">
+      <label>Status:</label>
+      <select [(ngModel)]="filterStatus" (change)="onFilterStatusChange(filterStatus)" class="filter-select">
+        <option value="all">All Statuses</option>
+        <option value="pending">Pending</option>
+        <option value="confirmed">Confirmed</option>
+        <option value="cancelled">Cancelled</option>
+        <option value="completed">Completed</option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label>Date:</label>
+      <select [(ngModel)]="filterDate" (change)="onFilterDateChange(filterDate)" class="filter-select">
+        <option value="all">All Dates</option>
+        <option value="today">Today</option>
+        <option value="upcoming">Upcoming</option>
+        <option value="past">Past</option>
+      </select>
+    </div>
+
+    <div class="filter-group search-group">
+      <input 
+        type="text" 
+        [(ngModel)]="searchTerm" 
+        (input)="onSearch()"
+        placeholder="Search appointments..."
+        class="search-input">
+    </div>
+
+    <button class="btn btn-link" (click)="clearFilters()">Clear Filters</button>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="loading-state">
+    <div class="spinner"></div>
+    <p>Loading appointments...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error" class="error-state">
+    <p>❌ {{ error }}</p>
+    <button class="btn btn-primary" (click)="loadAppointments()">Retry</button>
+  </div>
+
+  <!-- Appointments List View -->
+  <div *ngIf="!loading && !error && viewMode === 'list'" class="appointments-list">
+    <div *ngIf="filteredAppointments.length === 0" class="empty-state">
+      <p>No appointments found</p>
+      <p class="empty-hint">Try adjusting your filters or create a new appointment</p>
+    </div>
+
+    <div *ngFor="let appointment of filteredAppointments" class="appointment-card">
+      <!-- Card Header -->
+      <div class="appointment-header">
+        <div class="appointment-title">
+          <h3>{{ appointment.service_type }}</h3>
+          <span class="badge" [ngClass]="getStatusClass(appointment.status)">
+            {{ appointment.status }}
+          </span>
+        </div>
+        <div class="appointment-id">
+          #{{ appointment.id }}
+        </div>
+      </div>
+
+      <!-- Card Body -->
+      <div class="appointment-body">
+        <div class="appointment-info">
+          <div class="info-row">
+            <span class="info-icon">👤</span>
+            <span class="info-label">Client:</span>
+            <span class="info-value">{{ appointment.client_id }}</span>
+          </div>
+          
+          <div class="info-row">
+            <span class="info-icon">📅</span>
+            <span class="info-label">Date:</span>
+            <span class="info-value">{{ formatDate(appointment.scheduled_date) }}</span>
+          </div>
+          
+          <div class="info-row">
+            <span class="info-icon">⏱️</span>
+            <span class="info-label">Duration:</span>
+            <span class="info-value">{{ appointment.duration_minutes }} minutes</span>
+          </div>
+
+          <div *ngIf="appointment.notes" class="info-row">
+            <span class="info-icon">📝</span>
+            <span class="info-label">Notes:</span>
+            <span class="info-value">{{ appointment.notes }}</span>
+          </div>
+
+          <div class="info-row">
+            <span class="info-icon">🔔</span>
+            <span class="info-label">Reminder:</span>
+            <span class="info-value">{{ appointment.reminder_sent ? 'Sent' : 'Not sent' }}</span>
+          </div>
+        </div>
+
+        <!-- Time indicator -->
+        <div class="time-indicator" *ngIf="isUpcoming(appointment.scheduled_date)">
+          <span class="time-badge">{{ getRelativeTime(appointment.scheduled_date) }}</span>
+        </div>
+        <div class="time-indicator past" *ngIf="isPast(appointment.scheduled_date) && appointment.status !== 'completed'">
+          <span class="time-badge">⚠️ Past due</span>
+        </div>
+      </div>
+
+      <!-- Card Actions -->
+      <div class="appointment-actions">
+        <button 
+          *ngIf="appointment.status === 'pending'"
+          class="btn btn-success btn-sm"
+          (click)="confirmAppointment(appointment)">
+          ✓ Confirm
+        </button>
+        
+        <button 
+          *ngIf="appointment.status === 'confirmed' && isUpcoming(appointment.scheduled_date)"
+          class="btn btn-primary btn-sm"
+          (click)="completeAppointment(appointment)">
+          ✓ Complete
+        </button>
+        
+        <button 
+          *ngIf="appointment.status !== 'cancelled' && appointment.status !== 'completed'"
+          class="btn btn-danger btn-sm"
+          (click)="cancelAppointment(appointment)">
+          ✗ Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Calendar View (Placeholder) -->
+  <div *ngIf="!loading && !error && viewMode === 'calendar'" class="calendar-view">
+    <div class="calendar-placeholder">
+      <h2>📅 Calendar View</h2>
+      <p>Calendar view coming soon!</p>
+      <p>For now, use the list view to manage appointments.</p>
+      <button class="btn btn-primary" (click)="toggleViewMode()">Switch to List View</button>
+    </div>
+  </div>
+</div>

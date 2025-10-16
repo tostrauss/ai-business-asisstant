@@ -1,4 +1,3 @@
-// frontend/src/app/app.component.ts
 import { Component, OnInit } from '@angular/core';
 import { ChatService } from './services/chat.service';
 
